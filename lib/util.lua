@@ -20,7 +20,19 @@ function fetchManifest()
     return manifest
 end
 
-local Manifest = fetchManifest()
+-- Lazy manifest: fetching at require time runs on every `vfox env` /
+-- `vfox activate` (plugin load), adding a GitHub round-trip to each shell
+-- startup and env rebuild — and hanging them when the network is down.
+-- Defer the fetch to first actual use (available / pre_install paths).
+local manifestCache = nil
+local Manifest = setmetatable({}, {
+    __index = function(_, key)
+        if manifestCache == nil then
+            manifestCache = fetchManifest()
+        end
+        return manifestCache[key]
+    end
+})
 
 -- available.lua
 function fetchAvailable(buildArg)
